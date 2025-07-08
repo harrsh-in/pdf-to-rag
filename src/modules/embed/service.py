@@ -2,9 +2,13 @@ import logging
 from pathlib import Path
 from typing import List, TypedDict
 
+import numpy as np
+from chromadb.api.models.Collection import Metadata
+from chromadb.api.types import Embedding, OneOrMany
 from pypdf import PdfReader
 
 from src.config import settings
+from src.services.chromadb import chroma_service
 from src.services.openai import openai_service
 
 log = logging.getLogger("uvicorn")
@@ -20,7 +24,7 @@ class Chunk(TypedDict):
 class EmbeddedChunk(Chunk):
     """Represents a chunk with its embedding vector."""
 
-    embedding: List[float]
+    embedding: Embedding
 
 
 def parse_and_chunk_pdf(file_path: Path) -> List[Chunk]:
@@ -77,9 +81,55 @@ def create_embeddings_for_chunks(chunks: List[Chunk]) -> List[EmbeddedChunk]:
             {
                 "text": chunk["text"],
                 "page_number": chunk["page_number"],
-                "embedding": embeddings[i],
+                "embedding": np.array(embeddings[i], dtype=np.float32),
             }
         )
 
     log.info("Batch embeddings created successfully.")
     return embedded_chunks
+
+
+def store_embeddings_in_chromadb(
+    embedded_chunks: List[EmbeddedChunk],
+    collection_name: str,
+    document_name: str,
+) -> None:
+    """
+    Stores embedded chunks in ChromaDB collection using batch operations.
+
+    Args:
+        embedded_chunks: A list of chunks with their embeddings.
+        collection_name: The name of the ChromaDB collection.
+        document_name: The name of the document being stored.
+    """
+    if not embedded_chunks:
+        log.warning("No embedded chunks to store.")
+        return
+
+    log.info(f"Storing {len(embedded_chunks)} embeddings in ChromaDB collection '{collection_name}'...")
+
+    # Get or create the collection
+    collection = chroma_service.get_or_create_collection(name=collection_name)
+
+    # Prepare data for batch insertion with proper typing
+    ids: List[str] = [f"{document_name}_chunk_{i}" for i in range(len(embedded_chunks))]
+    embeddings: OneOrMany[Embedding] = [chunk["embedding"].tolist() for chunk in embedded_chunks]
+    documents: List[str] = [chunk["text"] for chunk in embedded_chunks]
+    metadatas: OneOrMany[Metadata] = [
+        {
+            "document_name": document_name,
+            "page_number": chunk["page_number"],
+            "chunk_index": i,
+        }
+        for i, chunk in enumerate(embedded_chunks)
+    ]
+
+    # Add to ChromaDB in batch
+    collection.add(
+        ids=ids,
+        embeddings=embeddings,
+        documents=documents,
+        metadatas=metadatas,
+    )
+
+    log.info(f"Successfully stored {len(embedded_chunks)} embeddings in ChromaDB.")

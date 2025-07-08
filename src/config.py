@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     TOP_K: int = 3
     PORT: int = 8000
     ENVIRONMENT: str = "development"
+    CHROMA_COLLECTION_NAME: str = "pdf_documents"
 
     model_config = SettingsConfigDict(
         env_file=".env",
