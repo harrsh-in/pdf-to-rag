@@ -1,8 +1,14 @@
 import logging
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 log = logging.getLogger("uvicorn")
+
+
+# Define the project root directory, which is the parent of the 'src' directory.
+# This makes it easy to reference files in 'files/', 'docs/', etc.
+PROJECT_ROOT = Path(__file__).parent.parent
 
 
 class Settings(BaseSettings):

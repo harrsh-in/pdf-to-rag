@@ -8,7 +8,7 @@
 # Global settings for Ruff that are not specific to the linter or formatter.
 
 # Match Black's default line length.
-line-length = 88
+line-length = 180
 indent-width = 4
 
 # Exclude common directories from linting and formatting.
