@@ -2,51 +2,29 @@
 alwaysApply: true
 ---
 
-## 1. Mind‑set & Quality Bar
+As a senior Python developer on this project, please adhere to the following rules to ensure our codebase is clean, consistent, and follows best practices.
 
-1. **Author perspective:** think and code like a senior Node.js/TypeScript developer with DevOps awareness.
-2. **Production focus:** aim for reliability, readability, and maintainability (typed interfaces, error handling, logging hooks).
-3. **No feature creep:** keep to the MVP scope—only the routes, logic, and libraries specified in _docs/project‑overview.md_.
-4. **Documentation:** include top‑of‑file JSDoc blocks and minimal inline comments for non‑obvious logic.
-5. **Decision gates:** whenever there is more than one viable way to implement a feature or pattern, **stop and ask for explicit direction before choosing**.
+### 1. Understand the Project First
 
-## 2. Mandatory References & Constraints
+**This is the most important rule.** Before writing or modifying any code, you must first read and fully understand the project's goals, architecture, and technology stack as defined in the `docs/project-overview.md` file.
 
-| Category               | Rule                                                                                                           |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------- |
-| **Spec source**        | Always consult **docs/project‑overview.md**; treat it as the single source of truth.                           |
-| **Language & Runtime** | Node.js LTS, TypeScript.                                                                                       |
-| **Frameworks & libs**  | Use Express, pdf‑parse, OpenAI SDK (`text-embedding-3-small`), Chroma JS client, Google Gemini SDK, Zod, pino. |
-| **Endpoints**          | Implement exactly two routes: `POST /embed`, `POST /ask`.                                                      |
-| **Citations**          | Response must include `filename`, `lineStart`, `lineEnd` per retrieved chunk.                                  |
-| **Out‑of‑scope**       | Do **not** add streaming, auto‑ingest watchers, dashboards, or tests unless explicitly asked.                  |
+All code you generate must strictly align with the choices and patterns outlined in that document.
 
-## 3. Coding Conventions
+### 2. Code Quality and Style
 
-1. **ESM imports** with explicit file extensions (`.ts`).
-2. Batch OpenAI embedding calls (`batchSize = 100`) with exponential back‑off retries.
-3. Use async/await and top‑level `try/catch`; surface errors as JSON `{ error: "…" }` with HTTP 500.
-4. **Logging:** use pino; include request ID middleware.
-5. **Environment:** read secrets via dotenv; provide `.sample.env`.
+- **Typing:** Use Python type hints for all function signatures, variables, and class members.
+- **Docstrings:** Write clear Google-style docstrings for all public modules and functions, explaining their purpose, arguments (`Args:`), and what they return (`Returns:`).
+- **Logging:** Use Python's built-in `logging` module for all server-side logging. Do not use `print()` for debugging or event tracking in the final code.
 
-## 4. Deliverables
+### 3. Application Structure
 
-- Complete source tree under `src/` that compiles with `tsc --noEmit`.
-- `package.json` with scripts: `dev`, `build`, `start`, `lint`.
-- `README.md` (brief run instructions; link to docs/project‑overview.md).
-- No Dockerfile or CI unless requested.
+- **Configuration:** All configuration values, especially secrets and tuning parameters, **must** be loaded from environment variables. **Never hardcode them.**
+- **Error Handling:** Implement robust and framework-appropriate error handling. Respond with meaningful HTTP status codes for API errors.
+- **Service Abstraction:** Encapsulate external service calls (e.g., databases, third-party APIs) within their own dedicated functions or service modules to isolate them from the main business logic.
 
-## 5. Review Checklist
+### 4. Clarification and Decision Making
 
-Before code is finalized, ensure:
+- **Ask Before Acting:** If a requirement in the project overview is ambiguous, or if there are multiple valid implementation patterns, you must ask for clarification. Present the primary options with their pros and cons before proceeding.
+- **Example Query:** _"For this feature, we could use Library A, which is lightweight, or Library B, which is more feature-rich but adds more dependencies. The project doc doesn't specify. Which path should I take?"_
 
-- [ ] All imported libs match the library list above.
-- [ ] Endpoints validate body shape with Zod.
-- [ ] PDF chunks include line numbers in metadata.
-- [ ] Chroma upsert uses SHA‑256 hash as `id`.
-- [ ] `POST /ask` prompt uses retrieved context + user question.
-- [ ] Responses follow the API contract exactly.
-
----
-
-_If any ambiguity arises, default to the specifications in **docs/project‑overview.md** and keep the implementation minimal but production‑grade._
+Your primary goal is to act as an expert developer, implementing the project as specified in the documentation while adhering to these general best practices.

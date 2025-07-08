@@ -1,0 +1,58 @@
+# pyproject.toml
+
+# ===============================
+# Ruff Configuration
+# ===============================
+
+[tool.ruff]
+# Global settings for Ruff that are not specific to the linter or formatter.
+
+# Match Black's default line length.
+line-length = 88
+indent-width = 4
+
+# Exclude common directories from linting and formatting.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+
+[tool.ruff.lint]
+# All linter-specific settings are configured here.
+
+# Select rule codes to enable.
+# "E": pycodestyle errors
+# "F": Pyflakes (finds logical errors like unused imports)
+# "I": isort (sorts imports)
+select = ["E", "F", "I"]
+
+# You can add specific rules to ignore here if needed.
+ignore = []
+
+# Allow auto-fixing for all enabled rules.
+fixable = ["ALL"]
+
+
+[tool.ruff.format]
+# All formatter-specific settings are configured here.
+
+# Use double quotes for strings, like Black.
+quote-style = "double"

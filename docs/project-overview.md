@@ -1,84 +1,90 @@
-# Project Overview – RAG MVP Demo
+## **Project Plan: RAG MVP Demo**
 
-## Objective
+### **Project Goal**
 
-Demonstrate a full Retrieval‑Augmented Generation (RAG) loop on Node.js with TypeScript, integrating OpenAI for embeddings, Chroma as the vector database, and Gemini for answer generation. The focus is on clarity of data flow and minimal surface area: one embed route, one question‑answer route, plus line‑level citations.
+We'll build a simple **Python application** that demonstrates the core concept of Retrieval-Augmented Generation (RAG). The final product will be a web service, built with **FastAPI**, that can read a PDF document and accurately answer questions about its content, citing the exact line numbers for its sources.
 
-## Key Technologies
+The main goal remains to create a clear, easy-to-understand demonstration with two primary functions:
 
-- **Runtime & Language**: Node.js LTS with TypeScript
-- **Web Framework**: Express
-- **PDF Parsing**: pdf‑parse (native MuPDF bindings under the hood)
-- **Embeddings Provider**: OpenAI text‑embedding‑3‑small
-- **Vector Store**: Managed cloud Chroma DB
-- **LLM Provider**: Google Gemini 1.5 Flash
-- **Validation & Utilities**: Zod for schema validation, pino for logging, dotenv for configuration
+1.  **Ingesting a document.**
+2.  **Answering questions based on that document.**
 
-## MVP Feature Set
+---
 
-1. Upload‑by‑reference: client names a PDF already present in the "files" folder in the root directory; server embeds it.
-2. Similarity search: question is embedded, matched against stored vectors, and ranked top‑k.
-3. Contextual answering: Gemini receives retrieved chunks as context and produces an answer.
-4. Citations: response includes filename and absolute line numbers for every supporting chunk.
+### **Core Technologies**
 
-## High‑Level Workflow
+- **Language:** Python
+- **Web Framework:** FastAPI
+- **PDF Reading:** `pypdf`
+- **AI for Understanding Content (Embeddings):** OpenAI (`text-embedding-3-small`) via the `openai` package
+- **AI for Generating Answers (LLM):** Google Gemini (`1.5 Flash`) via the `google-generativeai` package
+- **Vector Database:** ChromaDB via the `chromadb-client` package
+- **Project Utilities:** `Pydantic` (for data validation, built into FastAPI), `logging` (Python's standard library), `python-dotenv` (for configuration)
 
-1. **Embed phase**
+---
 
-   1. Client calls POST /embed with a filename.
-   2. Server resolves the path within files, parses text page by page, splits into overlapping chunks, and counts line numbers.
-   3. Chunks are embedded in batches via OpenAI and upserted into a dedicated Chroma collection together with metadata (filename, page, lineStart, lineEnd).
+### **How It Works: The Two Key Phases**
 
-2. **Question‑answer phase**
+#### **Phase 1: Adding a Document**
 
-   1. Client calls POST /ask with a free‑form question.
-   2. Server embeds the question, runs a similarity query (cosine + top‑k), and gathers the best chunks.
-   3. Gemini receives a prompt consisting of a concise system instruction, the retrieved chunks, and the user question.
-   4. Gemini’s completion is returned verbatim; citations are mapped from the retrieved metadata and included in the JSON response.
+This is how the application "reads" and learns from a PDF. The process is identical in concept.
 
-## API Contract
+1.  **Trigger:** You make an API call specifying the name of a PDF file located in a local `files/` folder.
+2.  **Parse & Chunk:** The server uses `pypdf` to read the PDF and break its text into small, manageable, and slightly overlapping chunks. It carefully tracks the starting and ending line number for each chunk.
+3.  **Embed:** Each text chunk is sent to OpenAI, which converts it into a numerical **embedding**.
+4.  **Store:** Each embedding is stored in the Chroma vector database along with its **metadata**: the original filename, page number, and the start/end line numbers.
 
-### POST /embed
+#### **Phase 2: Asking a Question**
 
-- **Request body**: object with a single string field called filename.
-- **Success response**: JSON containing status ok and the number of chunks stored.
-- **Failure cases**: 400 for missing file or validation error; 500 for unexpected server errors.
+This is how the application uses the learned information to answer your questions.
 
-### POST /ask
+1.  **Trigger:** You make an API call with your question.
+2.  **Embed Question:** The server takes your question and uses OpenAI to convert it into an embedding.
+3.  **Find Relevant Context:** The application searches ChromaDB to find the document chunks whose embeddings are most similar to your question's embedding.
+4.  **Generate Answer:** The server sends a prompt to Google's Gemini AI. This prompt includes:
+    - A clear instruction (e.g., "Answer the user's question based _only_ on the following text").
+    - The relevant document chunks it just found.
+    - Your original question.
+5.  **Respond with Citations:** The server returns Gemini's answer and a list of **citations**—the specific filename and line numbers of the chunks used to generate that answer.
 
-- **Request body**: object with a single string field called question.
-- **Success response**: JSON with answer text and an array of citation objects (filename, lineStart, lineEnd).
-- **Failure cases**: 400 for empty question; 500 for embedding, retrieval, or LLM failures.
+---
 
-## Data Model in Chroma
+### **API Endpoints**
 
-Each vector upsert includes:
+The application will have two simple API routes, defined in FastAPI.
 
-- **id** – SHA‑256 hash of the chunk text (deduplication key)
-- **embedding** – 1536‑dimensional float array
-- **metadata**
+1.  **`POST /embed`**
 
-  - filename (string)
-  - page (integer)
-  - lineStart (integer)
-  - lineEnd (integer)
+    - **Purpose:** To process and store a new PDF document.
+    - **Request:** `{ "filename": "your-document.pdf" }`
+    - **Response:** A confirmation message with the total number of chunks stored.
 
-## Configuration & Environment Variables
+2.  **`POST /ask`**
 
-- OPENAI_API_KEY – required
-- GEMINI_API_KEY – required
-- CHROMA_URL – root endpoint of the Chroma instance
-- CHUNK_SIZE, CHUNK_OVERLAP, TOP_K – optional tuning knobs with safe defaults
+    - **Purpose:** To ask a question and get an answer.
+    - **Request:** `{ "question": "What is the main topic of the document?" }`
+    - **Response:** The answer from the AI and a list of sources (citations).
+      ```json
+      {
+        "answer": "The main topic is...",
+        "citations": [
+          { "filename": "your-document.pdf", "lineStart": 52, "lineEnd": 65 }
+        ]
+      }
+      ```
 
-## Deployment & Ops
+---
 
-- Single‑binary Node application packaged with esbuild and pino‑pretty for local runs.
-- Chroma can run in‑process via chroma run‑server for demo or point to a managed instance.
-- Logging includes request ID, route, latency, OpenAI token count, and Gemini token count.
+### **Setup & Configuration**
 
-## MVP Limitations
+To run the project, you'll first install the necessary Python packages, likely from a `requirements.txt` file. You'll also need to set the following environment variables:
 
-- No streaming of Gemini tokens (plain JSON response).
-- PDFs must already exist in files directory; no upload endpoint.
-- No automatic ingestion trigger on startup.
-- No authentication or rate limiting.
+- `OPENAI_API_KEY`: Your API key for OpenAI.
+- `GEMINI_API_KEY`: Your API key for Google Gemini.
+- `CHROMA_URL`: The URL for your ChromaDB instance.
+
+You can also adjust these optional settings:
+
+- `CHUNK_SIZE`: How large each text chunk should be.
+- `CHUNK_OVERLAP`: How much text the chunks should overlap.
+- `TOP_K`: The number of relevant chunks to retrieve for answering a question.
