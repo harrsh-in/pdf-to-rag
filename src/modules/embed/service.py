@@ -73,7 +73,7 @@ def create_embeddings_for_chunks(chunks: List[Chunk]) -> List[EmbeddedChunk]:
     if not texts_to_embed:
         return []
 
-    embeddings = openai_service.create_embeddings_in_batch(texts=texts_to_embed)
+    embeddings = openai_service.create_embeddings(texts=texts_to_embed)
 
     embedded_chunks: List[EmbeddedChunk] = []
     for i, chunk in enumerate(chunks):
